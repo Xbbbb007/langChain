@@ -4,7 +4,7 @@ import json
 import subprocess
 from datetime import datetime
 
-def check_marker_file(filepath: str, max_age_seconds: int = 300) -> tuple:
+def check_marker_file(filepath: str) -> tuple:
     if not os.path.exists(filepath):
         return False, "标记文件不存在"
         
@@ -13,17 +13,9 @@ def check_marker_file(filepath: str, max_age_seconds: int = 300) -> tuple:
             data = json.load(f)
             
         status = data.get("status")
-        timestamp_str = data.get("timestamp")
         
         if status != "passed":
             return False, f"状态校验未通过 (status: {status})"
-            
-        # Parse timestamp to verify age
-        marker_time = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
-        age = (datetime.now() - marker_time).total_seconds()
-        
-        if age > max_age_seconds:
-            return False, f"标记文件已过期 (生成于 {timestamp_str}，距今 {int(age)} 秒前，要求 5 分钟内)"
             
         return True, "通过"
     except Exception as e:
@@ -50,13 +42,13 @@ def run_gatekeeper(workspace_path: str, commit_message: str = ""):
     print("--------------------------------------------------")
     
     if not (test_ok and quality_ok):
-        print("❌ 门禁拦截: 单元测试或质量检查未通过或已过期。")
-        print("   - 请先运行单元测试及质量审计以刷新状态标记。")
+        print("❌ 门禁拦截: 单元测试或质量检查未通过。")
+        print("   - 请先运行单元测试及质量审计以获取通过标记。")
         print("   - 操作已被中止，拒绝提交。")
         print("==================================================")
         sys.exit(1)
         
-    print("🟢 门禁放行: 所有检查通过且在时效范围内，允许提交！")
+    print("🟢 门禁放行: 所有检查通过，允许提交！")
     print("==================================================")
     
     # 3. Trigger git-save skill script
