@@ -1,0 +1,8 @@
+{
+  "name": "testing-plugin",
+  "version": "1.0.0",
+  "description": "系统测试与质量合规插件，包含测试智能体 tester、质量工程师 quality-engineer 以及提交守卫智能体 gitcommit-agent，提供单元测试、注释检查、安全审计、自动门禁以及 Git 存档推送技能。",
+  "author": {
+    "name": "Graduation Student"
+  }
+}

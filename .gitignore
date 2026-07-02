@@ -1,0 +1,33 @@
+# Virtual environment
+.venv/
+venv/
+ENV/
+
+# Dependency directories
+node_modules/
+jspm_packages/
+web_modules/
+
+# Python cache and testing files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+test_report.xml
+test_report.md
+quality_report.md
+security_report.md
+
+# Database files
+*.db
+*.sqlite3
+chroma_db/
+.agents/status/
+
+# IDE files
+.vscode/
+.idea/
+.gemini/
+*.log
