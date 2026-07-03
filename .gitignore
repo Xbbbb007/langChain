@@ -21,7 +21,9 @@ quality_report.md
 security_report.md
 .env
 .env.*
-
+scratch/
+*.db-shm
+*.db-wal
 
 # Database files
 *.db
