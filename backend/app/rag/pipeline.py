@@ -165,11 +165,16 @@ class RAGPipeline:
         except Exception as e:
             yield f"data: {json.dumps({'type': 'error', 'content': f'生成回答时发生错误: {str(e)}'})}\n\n"
 
-# Lazy-loaded singleton
+import threading
+
+# Thread-safe singleton with double-checked locking
 _rag_pipeline = None
+_pipeline_lock = threading.Lock()
 
 def get_rag_pipeline() -> RAGPipeline:
     global _rag_pipeline
     if _rag_pipeline is None:
-        _rag_pipeline = RAGPipeline()
+        with _pipeline_lock:
+            if _rag_pipeline is None:
+                _rag_pipeline = RAGPipeline()
     return _rag_pipeline
