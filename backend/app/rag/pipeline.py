@@ -18,7 +18,8 @@ class RAGPipeline:
         self.embeddings = OpenAIEmbeddings(
             model="text-embedding-v3",
             openai_api_key=settings.DASHSCOPE_API_KEY,
-            openai_api_base=settings.DASHSCOPE_BASE_URL
+            openai_api_base=settings.DASHSCOPE_BASE_URL,
+            check_embedding_ctx_length=False
         )
         # Initialize Chroma Vector Store
         self.vector_db = Chroma(
@@ -120,37 +121,50 @@ class RAGPipeline:
             
         messages.append({"role": "user", "content": query})
 
-        # Translate dict messages to LangChain message classes
-        lc_messages = []
-        for m in messages:
-            if m["role"] == "system":
-                # system prompt can be prepended as SystemMessage or formatted in ChatOpenAI
-                # For ChatOpenAI, we can pass as system role
-                lc_messages.append(HumanMessage(content=m["content"]) if m["role"] == "user" else AIMessage(content=m["content"]))
-            # Actually, standard LangChain core ChatMessage or SystemMessage / HumanMessage is better:
-        
-        # Let's import message classes properly
-        from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
-        lc_messages = []
-        for m in messages:
-            if m["role"] == "system":
-                lc_messages.append(SystemMessage(content=m["content"]))
-            elif m["role"] == "user":
-                lc_messages.append(HumanMessage(content=m["content"]))
-            elif m["role"] == "assistant":
-                lc_messages.append(AIMessage(content=m["content"]))
 
-        # 5. Call LLM and stream response
+        
+        # Determine whether to enable thinking based on query complexity and RAG context
+        enable_thinking = True
+        simple_greetings = ["你好", "您好", "hello", "hi", "你是谁", "在吗", "再见", "谢谢", "who are you"]
+        query_lower = query.strip().lower()
+        if (any(greet in query_lower for greet in simple_greetings) or len(query_lower) < 5) and not sources:
+            enable_thinking = False
+
+        # 5. Call OpenAI client and stream response (supporting thinking process)
         try:
-            full_response = ""
-            for chunk in self.llm.stream(lc_messages):
-                text_chunk = chunk.content
-                if text_chunk:
-                    full_response += text_chunk
-                    yield f"data: {json.dumps({'type': 'text', 'content': text_chunk})}\n\n"
+            from openai import OpenAI
+            client = OpenAI(
+                api_key=settings.DASHSCOPE_API_KEY,
+                base_url=settings.DASHSCOPE_CHAT_BASE_URL
+            )
             
-            # Send done with full content to easily save in database at frontend if needed,
-            # or backend can save it directly.
+            completion = client.chat.completions.create(
+                model=settings.DASHSCOPE_CHAT_MODEL,
+                messages=messages,
+                extra_body={"enable_thinking": enable_thinking},
+                stream=True
+            )
+            
+            full_response = ""
+            
+            for chunk in completion:
+                if not chunk.choices:
+                    continue
+                delta = chunk.choices[0].delta
+                
+                # Output thinking process to the backend console for debugging/logging,
+                # but do NOT stream it to the client.
+                reasoning = getattr(delta, "reasoning_content", None)
+                if reasoning:
+                    print(reasoning, end="", flush=True)
+                
+                # Stream only the final answer content to the client
+                content = getattr(delta, "content", None)
+                if content:
+                    full_response += content
+                    yield f"data: {json.dumps({'type': 'text', 'content': content})}\n\n"
+            
+            # Send done with full content to save in database
             yield f"data: {json.dumps({'type': 'done', 'full_content': full_response})}\n\n"
         except Exception as e:
             yield f"data: {json.dumps({'type': 'error', 'content': f'生成回答时发生错误: {str(e)}'})}\n\n"
