@@ -124,11 +124,7 @@ class RAGPipeline:
 
         
         # Determine whether to enable thinking based on query complexity and RAG context
-        enable_thinking = True
-        simple_greetings = ["你好", "您好", "hello", "hi", "你是谁", "在吗", "再见", "谢谢", "who are you"]
-        query_lower = query.strip().lower()
-        if (any(greet in query_lower for greet in simple_greetings) or len(query_lower) < 5) and not sources:
-            enable_thinking = False
+        enable_thinking = False
 
         # 5. Call OpenAI client and stream response (supporting thinking process)
         try:
