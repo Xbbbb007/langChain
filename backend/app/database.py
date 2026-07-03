@@ -11,7 +11,10 @@ if settings.DATABASE_URL.startswith("sqlite"):
     connect_args = {"check_same_thread": False, "timeout": 30}
 
 engine = create_engine(
-    settings.DATABASE_URL, connect_args=connect_args
+    settings.DATABASE_URL,
+    connect_args=connect_args,
+    pool_size=50,
+    max_overflow=100
 )
 
 # Enable WAL (Write-Ahead Logging) mode for SQLite to handle concurrency during load testing
